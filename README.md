@@ -1,70 +1,177 @@
-# Getting Started with Create React App
+# Transfer Service - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Visão Geral
 
-## Available Scripts
+Este projeto é um frontend para gerenciar operações de transferência. Ele é construído usando React, TailwindCSS e outras tecnologias web modernas. Abaixo, você encontrará detalhes sobre a estrutura do projeto, instruções de configuração e funcionalidades.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Estrutura do Projeto
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+A estrutura de diretórios do projeto é organizada da seguinte forma:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```plaintext
+frontend/
+├── node_modules/           # Dependências do projeto
+├── public/                 # Arquivos públicos estáticos
+│   ├── favicon.ico         # Ícone do site
+│   ├── index.html          # Template HTML
+│   ├── manifest.json       # Arquivo de manifesto PWA
+│   └── robots.txt          # Padrão de exclusão de robôs
+├── src/                    # Código-fonte principal
+│   ├── components/         # Componentes reutilizáveis do React
+│   │   ├── CreateTransferForm.jsx # Componente para criar transferências
+│   │   └── TransferList.jsx       # Componente para listar e visualizar transferências
+│   ├── context/            # Contexto React para gerenciamento de estado
+│   │   └── TransferContext.js     # Provedor de contexto de transferências
+│   ├── pages/              # Páginas da aplicação
+│   │   ├── Home.jsx              # Página inicial
+│   │   ├── ListTransfers.jsx     # Página para listar transferências
+│   │   └── Transfers.jsx         # Página para criar transferências
+│   ├── services/           # Manipuladores de serviços de API
+│   │   └── api.js                # Configuração da API Axios
+│   ├── styles/             # Estilos globais e específicos dos componentes
+│   │   └── index.css             # Arquivo principal do TailwindCSS
+│   ├── App.js              # Componente principal da aplicação
+│   ├── index.js            # Ponto de entrada da aplicação
+│   └── reportWebVitals.js  # Monitoramento de performance
+├── .gitignore              # Arquivo Git ignore
+├── Dockerfile              # Configuração Docker
+├── package-lock.json       # Arquivo de bloqueio de dependências
+├── package.json            # Metadados e scripts do projeto
+├── README.md               # Documentação do projeto
+└── tailwind.config.js      # Configuração do TailwindCSS
+```
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Funcionalidades
 
-### `npm run build`
+### 1. **Página Inicial**
+   - Tela de boas-vindas com opções de navegação para criar ou listar transferências.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 2. **Criar Transferência**
+   - Formulário para criar uma nova transferência.
+   - Validações usando `react-hook-form` e `yup`.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 3. **Lista de Transferências**
+   - Exibe uma lista de todas as transferências.
+   - Clicar em uma transferência exibe informações detalhadas.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 4. **Gerenciamento de Estado**
+   - `TransferContext` gerencia o estado global das transferências.
+   - Lida com a busca, criação e exibição de detalhes de transferências.
 
-### `npm run eject`
+## Pré-requisitos
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- Node.js (>=18.x)
+- npm (>=9.x)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Configuração com Docker Compose
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Arquivo `.env`
 
-## Learn More
+Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis de ambiente:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```env
+DB_NAME=transfer_db
+DB_USER=transfer_user
+DB_PASSWORD=transfer_password
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Arquivo `docker-compose.yml`
 
-### Code Splitting
+```yaml
+version: "3.8"
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+      NODE_ENV: production
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+    command: npm run dev
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+  db:
+    image: postgres:15
+    container_name: postgres_transfer_service
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
 
-### Analyzing the Bundle Size
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: "http://app:4000"
+    depends_on:
+      - app
+    volumes:
+      - ./frontend:/app
+    stdin_open: true
+    tty: true
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+volumes:
+  db_data:
+```
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Instruções para Execução
 
-### Advanced Configuration
+### Passo 1: Inicializar os contêineres
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Execute o seguinte comando para iniciar os serviços:
 
-### Deployment
+```bash
+docker-compose up --build
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Passo 2: Acessar os serviços
 
-### `npm run build` fails to minify
+- **Backend**: Acesse `http://localhost:4000`
+- **Frontend**: Acesse `http://localhost:3000`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Configuração
+
+### TailwindCSS
+- Personalize os estilos em `tailwind.config.js`.
+- Estilos globais estão definidos em `src/styles/index.css`.
+
+---
+
+## Dependências
+
+### Dependências Principais
+- **React**: ^18.3.0
+- **React Router DOM**: ^7.1.1
+- **Axios**: ^1.7.9
+- **React Hook Form**: ^7.54.2
+- **Yup**: ^1.6.1
+
+### Dependências de Desenvolvimento
+- **TailwindCSS**: ^3.4.17
+- **PostCSS**: ^8.4.49
+- **Autoprefixer**: ^10.4.20
