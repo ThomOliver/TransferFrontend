@@ -154,6 +154,7 @@ services:
       - app
     volumes:
       - ./TransferFrontend:/app
+                - /app/node_modules
     stdin_open: true
     tty: true
 
